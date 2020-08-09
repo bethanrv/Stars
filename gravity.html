@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Gravity</title>
+	<script src="https://cdn.jsdelivr.net/npm/p5@1.1.9/lib/p5.js"></script>
+</head>
+<body style="font-family: 'Courier New';">
+
+
+	<input style="display: none" id="NUMBER-OF-ENTITIES" oninput="setEntityNum()" type="number"/ placeholder="# Entities" >
+	<label style="display: none" for="doCollide"> Collisions </label>
+	<input style="display: none" id="do-collide" name="doCollide" type="radio">
+	<button style="display: none" id="resestBtn" onclick="resest();"> Reset </button>
+
+	<div style="display: flex; justify-content: center;">
+		<p style="font-size: 2em;"> Stars </p>
+	</div>
+
+
+
+
+	<label for="doCollide"> Collisions </label>
+	<input id="do-collide" name="doCollide" type="checkbox" checked oninput="changeCollide()">
+
+	<label for="gravInput"> Gravitational Constant: </label>
+	<input id='grav-input' type="number" name="gravInput" style="width: 6vw;" placeholder="1" oninput="changeGrav()">
+
+	<label for="starCount"> Number of Stars: </label>
+	<input id='star-input' type="number" name="starCount" style="width: 6vw;" placeholder="40" oninput="changeStarCount()">
+
+
+
+</body>
+</html>
+<script type="text/javascript">
+
+	let entities = [];
+	let stars = [];
+	let NUMBER_OF_STARS = 250;
+	let nextEntID = 0;
+	let GRAV_CONST = 0.1;
+	let TERMINAL_VELOCITY = 5;
+	let TERMINAL_ACCELERATION = 2;
+	let NUMBER_OF_ENTITIES = 40;
+	let MASS_SEED = 100;
+	let DRAG_COEF = 0.1;
+	let FIZZ_MASS_SEED = 5;
+	let ENTITY_COUNT = 0;
+	let mass_cap = 20;
+	let DETERIORATION_RATE = 0.0005 * NUMBER_OF_ENTITIES/10;
+	let doCollide = true;
+	let VELOCITY_SEED = 1;
+	let GRAV_POW = 2;
+	let BORDER_RULE = 'Bounce'; //Bonce or Transfer
+
+
+	function setup(){
+		createCanvas(windowWidth, windowHeight);
+		center_x = windowWidth/2;
+  		center_y = windowHeight/2;
+  		gererateEntities(NUMBER_OF_ENTITIES);
+  		angleMode(DEGREES);
+  		generateStars();
+
+	}
+
+
+	let isSetUp = false
+	function draw(){
+		background(0);
+		draw_stars();
+		drawEntities();
+		if(doCollide){
+			deteriorate();
+			collide();
+		}
+		gravity();
+		moveEntities();
+		fizz();
+		
+	}
+
+	function resest(){
+		entities = [];
+		ENTITY_COUNT = 0;
+		if(document.getElementById('NUMBER-OF-ENTITIES').value){
+			NUMBER_OF_ENTITIES = document.getElementById('NUMBER-OF-ENTITIES').value;
+		}
+		if(document.getElementById('do-collide').checked == true){
+			doCollide = true;
+		}
+		else document.getElementById('do-collide').checked = false;
+		gererateEntities(NUMBER_OF_ENTITIES);
+
+
+	}
+
+	function changeGrav(){
+		GRAV_CONST = document.getElementById('grav-input').value;
+	}
+
+	function changeStarCount(){
+		NUMBER_OF_ENTITIES = document.getElementById('star-input').value;
+		resest();
+	}
+
+	function changeCollide(){
+		if(doCollide){
+			doCollide = false;
+		}
+		else
+			doCollide = true;
+	}
+
+	function setEntityNum(){
+		NUMBER_OF_ENTITIES = document.getElementById('NUMBER-OF-ENTITIES').value;
+	}
+
+
+	function generateStars(){
+		let star_count = 0;
+
+		while(star_count < NUMBER_OF_STARS){
+
+			let star = new Object();
+
+			star.x = Math.random()*windowWidth;
+			star.y = Math.random()*windowHeight;
+
+			star_count++;
+		}
+	}
+
+	function draw_stars(){
+		stars.forEach(function(star){
+			fill(255);
+			circle(star.x, star.y, 2);
+		});
+	}
+
+	function gererateEntities(NUMBER_OF_ENTITIES){
+
+		while(ENTITY_COUNT < NUMBER_OF_ENTITIES){
+
+			let entity = new Object();
+			entity.ID = nextEntID;
+			nextEntID++;
+			entity.x = Math.random()*windowWidth;
+			entity.y = Math.random()*windowHeight;
+			entity.velocityX = 0;
+			entity.velocityY = 0;
+			entity.accelerationX = 0;
+			entity.accelerationY = 0;
+			entity.mass = Math.random()*Math.random()*Math.random()*MASS_SEED;
+			entity.radius = entity.mass;
+			//let shadeR = Math.random()*255 + 0;
+			//let shadeG = (Math.random()*Math.random()*255 + 0);
+			//let shadeB = Math.random()*255 + 0;
+			//entity.color = color(shadeR, shadeG, shadeB);
+			entity.color = color(255);
+
+
+			entities.push(entity);
+
+			ENTITY_COUNT++;
+		}
+
+	}
+
+	function fizz(){
+		while(ENTITY_COUNT < NUMBER_OF_ENTITIES){
+			let entity = new Object();
+			entity.ID = nextEntID;
+			nextEntID++;
+			entity.x = Math.random()*windowWidth;
+			entity.y = Math.random()*windowHeight;
+			entity.velocityX = Math.random()*VELOCITY_SEED;
+			entity.velocityY = Math.random()*VELOCITY_SEED;
+			entity.accelerationX = 0;
+			entity.accelerationY = 0;
+			entity.mass = Math.random()*FIZZ_MASS_SEED;
+			entity.radius = entity.mass;
+			// let shadeR = Math.random()*255 + 0;
+			// let shadeG = Math.random()*255 + 0;
+			// let shadeB = Math.random()*255 + 0;
+			// entity.color = color(shadeR, 0, shadeB);
+			entity.color = color(255);
+
+
+			entities.push(entity);
+			ENTITY_COUNT++;
+		}
+	}
+
+
+	function drawEntities(){
+		entities.forEach(function(entity){
+			fill(entity.color);
+			circle(entity.x, entity.y, entity.radius);
+		});
+	}
+
+	function moveEntities(){
+		entities.forEach(function(entity){
+
+			//reflect points outside bounds
+			if(BORDER_RULE == 'Transfer'){
+				if(entity.x < 0){
+				entity.x = windowWidth;
+				}
+				else if(entity.x > windowWidth){
+					entity.x = 0;
+				}
+
+				if(entity.y < 0){
+					entity.y = windowHeight;
+				}
+				else if(entity.y > windowHeight){
+					entity.y = 0;
+				}
+			}
+			else if(BORDER_RULE == 'Bounce'){
+				if(entity.x <= 0){
+					entity.x = 0;
+					entity.velocityX*=-1;
+					entity.accelerationX*=-1;
+				}
+				else if(entity.x >= windowWidth){
+					entity.x = windowWidth;
+					entity.velocityX*=-1;
+					entity.accelerationX*=-1;
+				}
+				else if(entity.y <=0){
+					entity.y = 0;
+					entity.velocityY*=-1;
+					entity.accelerationY*=-1;
+				}
+				else if(entity.y >= windowHeight){
+					entity.y = windowHeight;
+					entity.velocityY*=-1;
+					entity.accelerationY*=-1;
+				}
+			}
+			
+
+			entity.x += entity.velocityX;
+			entity.y += entity.velocityY;
+
+			entity.velocityX += entity.accelerationX;
+			entity.velocityY += entity.accelerationY;
+
+			entity.accelerationX *= (1-DRAG_COEF);
+			entity.accelerationY *= (1-DRAG_COEF);
+			entity.velocityX *= (1-DRAG_COEF/10);
+			entity.velocityY *= (1-DRAG_COEF/10);
+
+			if(entity.velocityX > TERMINAL_VELOCITY) entity.velocityX = TERMINAL_VELOCITY;
+			else if(entity.velocityX < -1*TERMINAL_VELOCITY) entity.velocityX = -1*TERMINAL_VELOCITY;
+			if(entity.velocityY > TERMINAL_VELOCITY) entity.velocityY = TERMINAL_VELOCITY;
+			else if(entity.velocityY < -1*TERMINAL_VELOCITY) entity.velocityY = -1*TERMINAL_VELOCITY;
+
+			if(entity.accelerationX > TERMINAL_VELOCITY) entity.accelerationX = TERMINAL_ACCELERATION;
+			else if(entity.accelerationX < -1*TERMINAL_VELOCITY) entity.accelerationX = -1*TERMINAL_ACCELERATION;
+			if(entity.accelerationY > TERMINAL_ACCELERATION) entity.accelerationY = TERMINAL_VELOCITY;
+			else if(entity.accelerationY < -1*TERMINAL_ACCELERATION) entity.accelerationY = -1*TERMINAL_ACCELERATION;
+
+
+			// if(entity.accelerationX > 0) entity.accelerationX-= entity.accelerationX*DRAG_COEF;
+			// else if(entity.accelerationX < 0) entity.accelerationX += entity.accelerationX*DRAG_COEF;
+
+			// if(entity.accelerationY > 0) entity.accelerationY-= entity.accelerationY*DRAG_COEF;
+			// else if(entity.accelerationY < 0) entity.accelerationY += entity.accelerationY*DRAG_COEF;
+
+			// let true_velocity = Math.pow(Math.pow(entity.velocityX,2) + Math.pow(entity.velocityX,2) ,0.5);
+
+
+			// if(true_velocity > TERMINAL_VELOCITY){
+
+			// 	let xCoef = 1;
+			// 	let yCoef = -1;
+
+			// 	if(entity.velocityX < 0) xCoef = -1;
+			// 	if(entity.velocityY < 0) yCoef = -1;
+
+			//  	// let angle = tan(Math.abs(entity.velocityY)/(Math.abs(entity.velocityX)+0.0001));
+			//  	let angle = getAngle(entity.x, entity.y, entity.x+entity.velocityX, entity.y+entity.velocityY);
+			// 	entity.velocityX = TERMINAL_VELOCITY * cos(angle)*xCoef;
+			// 	entity.velocityY = TERMINAL_VELOCITY * sin(angle)*yCoef;
+
+
+			// }
+
+			// let true_acceleration = Math.pow(Math.pow(entity.accelerationX,2) + Math.pow(entity.accelerationY,2) ,0.5);
+
+			// if(true_acceleration > TERMINAL_ACCELERATION){
+
+			// 	let xCoef = 1;
+			// 	let yCoef = -1;
+
+			// 	if(entity.accelerationX < 0) xCoef = -1;
+			// 	if(entity.accelerationY < 0) yCoef = -1;
+
+			// 	//let angle = tan(Math.abs(entity.accelerationX)/(Math.abs(entity.accelerationY)+0.0001));
+			// 	let angle = getAngle(entity.velocityX, entity.velocityY, entity.velocityX+entity.accelerationX, entity.velocityY+entity.accelerationY);
+			// 	entity.accelerationX = TERMINAL_VELOCITY * cos(angle) * xCoef;
+			// 	entity.accelerationY = TERMINAL_VELOCITY * sin(angle) * yCoef;
+			// }
+		});
+	}
+
+	function gravity(){
+
+		
+
+		entities.forEach(function(entity){
+			let totalAccelerationX = 0;
+			let totalAccelerationY = 0;
+			entities.forEach(function(other_entity){
+				if(entity.ID != other_entity.ID){
+
+					let distance = (Math.pow(dist(entity.x, entity.y, other_entity.x, other_entity.y),GRAV_POW));
+					if(Math.pow(distance,GRAV_POW) < entity.radius+other_entity.radius) distance = entity.radius + other_entity.radius;
+
+					let gForce = (GRAV_CONST*entity.mass*other_entity.mass)/distance;
+
+					let accelerationTotal = gForce/entity.mass;
+
+					//cap acceleration
+					if(accelerationTotal > TERMINAL_ACCELERATION){
+						accelerationTotal = TERMINAL_ACCELERATION;
+					}
+
+					let angle = getAngle(entity.x, entity.y, other_entity.x, other_entity.y);
+
+					totalAccelerationX += accelerationTotal*cos(angle);
+					totalAccelerationY += accelerationTotal*sin(angle);
+				}
+			});
+
+			entity.accelerationX += totalAccelerationX;
+			entity.accelerationY += totalAccelerationY;
+
+		});
+
+
+	}
+
+
+	function collide(){
+		entities.forEach(function(entity){
+			let otherEntCount = 0;
+			entities.forEach(function(other_entity){
+				if(entity.ID != other_entity.ID){
+					if(dist(entity.x, entity.y, other_entity.x, other_entity.y) < (entity.radius + other_entity.radius)*0.5 && entity.mass >= other_entity.mass){
+						//eat
+						entity.mass+=other_entity.mass;
+						entity.radius+= other_entity.radius;
+						entity.velocityX += other_entity.velocityX*(other_entity.mass/entity.mass);
+						entity.velocityY += other_entity.velocityY*(other_entity.mass/entity.mass);
+						entity.accelerationX += other_entity.accelerationX*(other_entity.mass/entity.mass);
+						entity.accelerationY += other_entity.accelerationY*(other_entity.mass/entity.mass);
+
+						let ent_red = red(entity.color) * (entity.mass/(entity.mass+other_entity.mass));
+						let ent_green = green(entity.color) * (entity.mass/(entity.mass+other_entity.mass));
+						let ent_blue = blue(entity.color) * (entity.mass/(entity.mass+other_entity.mass));
+
+						let other_ent_red = red(other_entity.color) * (other_entity.mass/(entity.mass+other_entity.mass));
+						let other_ent_green = green(other_entity.color) * (other_entity.mass/(entity.mass+other_entity.mass));
+						let other_ent_blue = blue(other_entity.color) * (other_entity.mass/(entity.mass+other_entity.mass));
+
+						entity.color = color(ent_red+other_ent_red, ent_green+other_ent_green, ent_blue+other_ent_blue);
+
+						entities.splice(otherEntCount, 1);
+						ENTITY_COUNT--;
+					}
+				}
+				otherEntCount++;
+			});
+		});
+	}
+
+
+	function deteriorate(){
+		let entNum = 0;
+		entities.forEach(function(entity){
+			if(entity.mass > mass_cap){
+				//entities.splice(entNum, 1);
+				//return;
+				entity.mass*=(1-DETERIORATION_RATE);
+				entity.radius = entity.mass;
+			}
+			entNum++;
+		});
+	}
+
+
+
+	//get angle from one point to next
+	function getAngle(x1, y1, x2, y2){
+		
+		let delta_x = x1-x2;
+		if(delta_x == 0) delta_x = 0.000001;
+		let delta_y = y1-y2;
+
+		let angle = atan(delta_y/delta_x);
+
+		if(angle == 0 && x1 > x2) return 180;
+
+		if(Number.isNaN(angle)){
+			angle = 0;
+		}
+
+		if(angle < 0) angle*=-1;
+
+		if(y1 > y2){
+			if(x1 > x2){
+				angle += 180;
+			}
+			else if(x1 == x2){
+				angle+=180;
+			}
+			else {
+				angle += 270;
+			}
+		}
+		else if(x2 < x1){
+			angle += 90;
+		}
+		return angle;
+	}
+
+	
+
+</script>
